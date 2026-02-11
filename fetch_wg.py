@@ -1,30 +1,51 @@
-import requests
+from DrissionPage import ChromiumPage, ChromiumOptions
+import time
 import os
 
 def get_config():
-    url = "https://www.vpnbook.com/freevpn/wireguard-vpn"
-    # پارامترهایی که خودت استخراج کردی
-    data = {
-        'server': 'us16',
-        'port': '123',
-        'action': 'generate'
-    }
-    headers = {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-    }
-
-    print("Connecting to VPNBook...")
-    response = requests.post(url, data=data, headers=headers)
+    # تنظیمات مرورگر برای اجرا در محیط گیت‌هاب
+    co = ChromiumOptions()
+    co.set_argument('--headless')
+    co.set_argument('--no-sandbox')
+    co.set_argument('--disable-gpu')
     
-    if "[Interface]" in response.text:
-        with open("wg0.conf", "w") as f:
-            f.write(response.text)
-        print("✅ Config saved successfully!")
-    else:
-        print("❌ Failed to get config. Cloudflare might be blocking.")
-        # برای عیب‌یابی در لاگ‌های گیت‌هاب
-        print(response.text[:500]) 
+    page = ChromiumPage(co)
+    
+    try:
+        print("🚀 Opening VPNBook...")
+        page.get('https://www.vpnbook.com/freevpn/wireguard-vpn')
+        
+        # صبر می‌کنیم تا چالش کلاودفلر رد شود
+        time.sleep(10) 
+        
+        print("🔘 Selecting Server and Port...")
+        # کلیک روی دکمه تولید (بر اساس اطلاعاتی که خودت استخراج کردی)
+        # در اینجا مستقیم از API داخلی صفحه برای ارسال فرم استفاده می‌کنیم
+        page.run_js("document.querySelector('select[name=\"server\"]').value = 'us16';")
+        page.run_js("document.querySelector('select[name=\"port\"]').value = '123';")
+        
+        print("💾 Clicking Generate...")
+        page.ele('@@tag()=button@@text()=Generate').click()
+        
+        # صبر برای دریافت پاسخ
+        time.sleep(5)
+        
+        # محتوای صفحه را چک می‌کنیم
+        content = page.html
+        if "[Interface]" in content:
+            # پاک کردن تگ‌های HTML اضافی اگر وجود داشت (فقط متن کانفیگ)
+            config_text = page.ele('tag:body').text
+            with open("wg0.conf", "w") as f:
+                f.write(config_text)
+            print("✅ Success! wg0.conf created.")
+        else:
+            print("❌ Config not found in page content.")
+            
+    except Exception as e:
+        print(f"⚠️ Error: {e}")
+    finally:
+        page.quit()
 
 if __name__ == "__main__":
     get_config()
-  
+            
