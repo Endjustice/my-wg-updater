@@ -1,0 +1,33 @@
+name: Update WG Config
+
+on:
+  schedule:
+    - cron: '0 */3 * * *' # هر ۳ ساعت یکبار اجرا می‌شود
+  workflow_dispatch: # اجازه اجرای دستی را هم می‌دهد
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+
+      - name: Install dependencies
+        run: pip install requests
+
+      - name: Run script
+        run: python fetch_wg.py
+
+      - name: Commit and Push
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add wg0.conf
+          git commit -m "Update WG config [$(date)]" || exit 0
+          git push
+          
