@@ -2,23 +2,27 @@ name: Update WG Config
 
 on:
   schedule:
-    - cron: '0 */3 * * *' # هر ۳ ساعت یکبار اجرا می‌شود
-  workflow_dispatch: # اجازه اجرای دستی را هم می‌دهد
+    - cron: '0 */3 * * *'
+  workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
-          python-version: '3.9'
+          python-version: '3.10'
 
       - name: Install dependencies
-        run: pip install requests
+        run: |
+          pip install DrissionPage
+          # نصب مرورگر کروم در محیط اوبونتو
+          sudo apt-get update
+          sudo apt-get install -y google-chrome-stable
 
       - name: Run script
         run: python fetch_wg.py
@@ -27,7 +31,12 @@ jobs:
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
-          git add wg0.conf
-          git commit -m "Update WG config [$(date)]" || exit 0
-          git push
+          # بررسی وجود فایل قبل از کامیت برای جلوگیری از خطای قبلی
+          if [ -f "wg0.conf" ]; then
+            git add wg0.conf
+            git commit -m "Update WG config [$(date)]"
+            git push
+          else
+            echo "File wg0.conf not found, skipping commit."
+          fi
           
